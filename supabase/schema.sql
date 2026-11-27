@@ -1,15 +1,16 @@
 -- SisAuto: modelo de dados da Fase 1
 -- Pensado para vários representantes no futuro: toda tabela tem representante_id.
 
+-- Cada representante é um usuário do login do Supabase.
 create table representantes (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key references auth.users(id) on delete cascade,
   nome text not null,
   criado_em timestamptz not null default now()
 );
 
 create table fabricas (
   id uuid primary key default gen_random_uuid(),
-  representante_id uuid not null references representantes(id),
+  representante_id uuid not null default auth.uid() references representantes(id) on delete cascade,
   nome text not null,                       -- ex.: Eurotextil
   comissao_padrao numeric(5,2)              -- % padrão da fábrica
 );
@@ -24,7 +25,7 @@ create table filiais (
 
 create table clientes (
   id uuid primary key default gen_random_uuid(),
-  representante_id uuid not null references representantes(id),
+  representante_id uuid not null default auth.uid() references representantes(id) on delete cascade,
   empresa text not null,                    -- razão social usada no portal
   contato text,                             -- nome no WhatsApp
   telefone text,
@@ -47,7 +48,7 @@ create type status_pedido as enum
 
 create table pedidos (
   id uuid primary key default gen_random_uuid(),
-  representante_id uuid not null references representantes(id),
+  representante_id uuid not null default auth.uid() references representantes(id) on delete cascade,
   cliente_id uuid not null references clientes(id),
   filial_id uuid references filiais(id),
   numero_fabrica text,                      -- nº do pedido no portal (ex.: 2260889)
@@ -92,3 +93,53 @@ create table historico_status (
   em timestamptz not null default now(),
   nota text
 );
+
+-- Quando alguém cria conta, vira um representante.
+create function public.novo_representante() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.representantes (id, nome)
+  values (new.id, coalesce(new.raw_user_meta_data->>'nome', new.email));
+  return new;
+end;
+$$;
+
+create trigger ao_criar_usuario
+  after insert on auth.users
+  for each row execute function public.novo_representante();
+
+-- Segurança: cada representante só vê e altera os próprios dados.
+alter table representantes enable row level security;
+alter table fabricas enable row level security;
+alter table filiais enable row level security;
+alter table clientes enable row level security;
+alter table lista_desejos enable row level security;
+alter table pedidos enable row level security;
+alter table itens_pedido enable row level security;
+alter table notas_fiscais enable row level security;
+alter table historico_status enable row level security;
+
+create policy "proprio" on representantes for all
+  using (id = auth.uid()) with check (id = auth.uid());
+create policy "proprio" on fabricas for all
+  using (representante_id = auth.uid()) with check (representante_id = auth.uid());
+create policy "proprio" on clientes for all
+  using (representante_id = auth.uid()) with check (representante_id = auth.uid());
+create policy "proprio" on pedidos for all
+  using (representante_id = auth.uid()) with check (representante_id = auth.uid());
+
+create policy "da fabrica" on filiais for all
+  using (exists (select 1 from fabricas f where f.id = fabrica_id and f.representante_id = auth.uid()))
+  with check (exists (select 1 from fabricas f where f.id = fabrica_id and f.representante_id = auth.uid()));
+create policy "do cliente" on lista_desejos for all
+  using (exists (select 1 from clientes c where c.id = cliente_id and c.representante_id = auth.uid()))
+  with check (exists (select 1 from clientes c where c.id = cliente_id and c.representante_id = auth.uid()));
+create policy "do pedido" on itens_pedido for all
+  using (exists (select 1 from pedidos p where p.id = pedido_id and p.representante_id = auth.uid()))
+  with check (exists (select 1 from pedidos p where p.id = pedido_id and p.representante_id = auth.uid()));
+create policy "do pedido" on notas_fiscais for all
+  using (exists (select 1 from pedidos p where p.id = pedido_id and p.representante_id = auth.uid()))
+  with check (exists (select 1 from pedidos p where p.id = pedido_id and p.representante_id = auth.uid()));
+create policy "do pedido" on historico_status for all
+  using (exists (select 1 from pedidos p where p.id = pedido_id and p.representante_id = auth.uid()))
+  with check (exists (select 1 from pedidos p where p.id = pedido_id and p.representante_id = auth.uid()));

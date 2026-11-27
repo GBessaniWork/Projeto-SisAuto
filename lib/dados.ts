@@ -1,20 +1,13 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { clientesDemo, pedidosDemo } from "./demo";
+import { supabaseConfigurado, supabaseServidor } from "./supabase/server";
 import type { Cliente, Pedido, StatusPedido } from "./tipos";
 
-function supabase(): SupabaseClient | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
-
 export function modoDemo(): boolean {
-  return supabase() === null;
+  return !supabaseConfigurado();
 }
 
 export async function listarClientes(): Promise<Cliente[]> {
-  const db = supabase();
+  const db = await supabaseServidor();
   if (!db) return clientesDemo;
   const { data, error } = await db
     .from("clientes")
@@ -34,7 +27,7 @@ export async function listarClientes(): Promise<Cliente[]> {
 }
 
 export async function listarPedidos(): Promise<Pedido[]> {
-  const db = supabase();
+  const db = await supabaseServidor();
   if (!db) return pedidosDemo;
   const { data, error } = await db
     .from("pedidos")

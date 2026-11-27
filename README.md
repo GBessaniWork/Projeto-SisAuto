@@ -21,6 +21,11 @@ npm install
 npm run dev
 ```
 Abra http://localhost:3000. Sem o arquivo `.env.local` o painel abre em modo demonstração.
-Para usar dados reais, crie um projeto no Supabase, rode `supabase/schema.sql` e preencha `.env.local` a partir de `.env.example`.
+Para usar dados reais:
+1. Crie um projeto no Supabase e rode `supabase/schema.sql` no SQL Editor.
+2. Ligue o Supabase ao projeto da Vercel (ou preencha `.env.local` a partir de `.env.example`).
+3. Abra o painel, crie sua conta e, em Clientes, toque em "Importar meus clientes".
+
+Com o Supabase ligado, o painel pede login e cada representante só vê os próprios dados (Row Level Security).
 
 O painel é pensado primeiro para o celular e pode ser instalado na tela inicial ("Adicionar à tela de início").
