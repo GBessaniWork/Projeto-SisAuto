@@ -14,3 +14,13 @@ Sistema para representantes comerciais: atendimento no WhatsApp, pedidos com reg
 - Hospedagem na Vercel
 
 O modelo de dados está em `supabase/schema.sql`.
+
+## Como rodar
+```
+npm install
+npm run dev
+```
+Abra http://localhost:3000. Sem o arquivo `.env.local` o painel abre em modo demonstração.
+Para usar dados reais, crie um projeto no Supabase, rode `supabase/schema.sql` e preencha `.env.local` a partir de `.env.example`.
+
+O painel é pensado primeiro para o celular e pode ser instalado na tela inicial ("Adicionar à tela de início").
